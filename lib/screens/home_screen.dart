@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -13,19 +14,25 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final AudioPlayer _bgmPlayer = AudioPlayer();
+  bool _bgmStarted = false;
 
   @override
   void initState() {
     super.initState();
-    _playBgm();
+    if (!kIsWeb) _playBgm();
   }
 
   Future<void> _playBgm() async {
     final gs = ref.read(gameProvider);
     if (!gs.bgmEnabled) return;
+    _bgmStarted = true;
     await _bgmPlayer.setReleaseMode(ReleaseMode.loop);
     await _bgmPlayer.setVolume(gs.bgmVolume);
     await _bgmPlayer.play(AssetSource('audio/hall_bgm.wav'));
+  }
+
+  void _onInteraction() {
+    if (!_bgmStarted) _playBgm();
   }
 
   @override
@@ -125,7 +132,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FF),
-      body: Stack(
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: _onInteraction,
+        child: Stack(
         fit: StackFit.expand,
         children: [
           // 背景图（最底层）
@@ -197,6 +207,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
           ),
         ],
+        ),
       ),
     );
   }

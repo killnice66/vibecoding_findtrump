@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -39,6 +40,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   final AudioPlayer _bgmPlayer = AudioPlayer();
   // 音效池：每个文件预加载一个 player，播放时直接 seek(0)+resume，消除延迟
   final Map<String, AudioPlayer> _sfxPool = {};
+  bool _bgmStarted = false;
 
   static const double _sfxVolume = 1.0;
 
@@ -46,7 +48,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void initState() {
     super.initState();
     _preloadSfx();
-    _playRandomBgm();
+    if (!kIsWeb) _playRandomBgm();
   }
 
   Future<void> _preloadSfx() async {
@@ -59,10 +61,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Future<void> _playRandomBgm() async {
-    final vol = ref.read(gameProvider).bgmVolume;
+    final gs = ref.read(gameProvider);
+    if (!gs.bgmEnabled) return;
+    _bgmStarted = true;
     final bgm = _gameBgmList[Random().nextInt(_gameBgmList.length)];
     await _bgmPlayer.setReleaseMode(ReleaseMode.loop);
-    await _bgmPlayer.setVolume(vol);
+    await _bgmPlayer.setVolume(gs.bgmVolume);
     await _bgmPlayer.play(AssetSource(bgm));
   }
 
@@ -146,7 +150,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      body: SafeArea(
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () { if (!_bgmStarted) _playRandomBgm(); },
+        child: SafeArea(
         child: Column(
           children: [
             _TopBar(
@@ -172,6 +179,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             _BottomBar(gameState: gameState),
             const SizedBox(height: 12),
           ],
+        ),
         ),
       ),
     );
